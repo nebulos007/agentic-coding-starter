@@ -1,10 +1,8 @@
 # Build Plan
 
-_This file is the phased build plan for the project. It's the bridge between `docs/PRD.md` (what to build) + `docs/DESIGN.md` (what it looks like) and the actual code. Fill it out with the `build-plan` skill after the PRD and design brief are stable. Re-run the skill whenever reality has diverged from the plan._
-
-> **Status:** Draft / In Progress / Complete
-> **Last updated:** YYYY-MM-DD
-> **Current phase:** _e.g. Phase 2_
+> **Status:** Draft
+> **Last updated:** 2026-05-07
+> **Current phase:** Phase 0 (scaffolding mostly done — finalizing)
 
 ---
 
@@ -23,87 +21,250 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 
 ## Strategy
 
-_Fill in after the build-plan interview. 3–5 sentences max._
-
-- **Slicing principle:** _e.g. "Vertical slices by user story — each phase ships one story end-to-end."_
-- **Critical path:** _Which 1–2 phases unblock everything else?_
-- **What was deferred to later phases on purpose:** _e.g. auth was punted to phase 4 because the read-only MVP doesn't need it._
+- **Slicing principle:** **Vertical slices by user story.** Each phase ships one PRD must-have end-to-end (DB → API → UI). Matches the week-2 / week-3 / week-4 milestones in PRD §8, which are themselves vertical.
+- **Critical path:** Phase 1 (Apple Music auth + library load) → Phase 2 (BYOK LLM wired in). PRD §7 calls MusicKit JS the biggest risk; doing it first means a week-2 wall is surfaced in week 2, not in week 4.
+- **Deferred on purpose:**
+  - **Cold-start library animation** → Phase 6. DESIGN §7 flags it as the highest-risk piece of motion work. Phase 1 ships a static "Loaded N songs" message instead.
+  - **Chat-streaming "iMessage feel"** → Phase 6, optional. PRD owner has explicitly said this is not a v1 concern.
+  - **Playlist building (story #5)** and **taste-avatar (story #6)** → not in this plan. Decision-log them if they come back.
+- **`/clear` between phases.** Every phase boundary is a hint to clear context. Each phase's "Context to load" line is the *only* thing the next session should pull in.
 
 ---
 
 ## Phases
 
-Each phase below follows the same structure. Skip what doesn't apply but keep the headers so future-you (or future-Claude) can scan.
+### Phase 0 — Scaffolding (mostly done)
 
-### Phase 0 — Scaffolding
+**Goal:** Worker bootstrapped, deploy pipeline working, public URL in README, Cloudflare bindings (D1 / R2 / KV / AI Gateway) declared.
 
-**Goal:** Repo bootstrapped, deploy pipeline working, CLAUDE.md and PRD/DESIGN/BUILDPLAN docs in place.
+**Context to load:** `CLAUDE.md`, `docs/PRD.md` §6, existing `musicbot/` directory, `musicbot/wrangler.jsonc`.
 
-**Context to load:** `CLAUDE.md`, `docs/PRD.md` (section 6), `docs/DESIGN.md` (section 3).
+**Files this phase creates/modifies:**
+- `musicbot/wrangler.jsonc` — add `[[d1_databases]]`, `[[r2_buckets]]`, `[[kv_namespaces]]`, AI Gateway env var
+- `musicbot/src/index.ts` — verify smoke route still works after bindings added
+- `README.md` — public URL, BYOK note, Apple Developer ($99/yr) note
+- `musicbot/.dev.vars.example` — placeholder for local secrets
 
-**Files this phase creates/modifies:** `wrangler.toml`, `package.json`, `src/index.ts`, `vitest.config.ts`, `README.md`.
-
-**Tests this phase adds:** A single smoke test that the worker responds 200.
+**Tests this phase adds:** Existing smoke test (`test/index.spec.ts`) continues to pass.
 
 **Done-when:**
 - [ ] `npm test` passes.
 - [ ] `wrangler deploy` produces a public URL.
-- [ ] URL is in `README.md`.
+- [ ] URL in `README.md`.
+- [ ] D1, R2, KV bindings declared in `wrangler.jsonc` (resources can be created later).
 
-**Session budget:** ~1 session.
+**Session budget:** < 1.
+
+**Risks / unknowns:** Cloudflare account quotas; D1 may require paid plan when real data lands.
 
 ---
 
-### Phase 1 — _One-line title_
+### Phase 1 — Connect Apple Music & see your library
 
-**Goal:** _The single user-visible outcome of this phase._
+**Goal:** A user signs in with Apple Music, the app fetches and stores their library, and the chat screen shows recommendation cards (placeholder content) plus a "Loaded N songs" message. Maps to PRD §8 week-2 milestone.
 
-**Context to load:** _Which sections of PRD.md, DESIGN.md, and which existing files. Be specific — "PRD §4 user story 1" beats "the PRD"._
+**Context to load:** PRD §4 stories 1+3, §6, §7 (MusicKit limits), §8 week-2; DESIGN §2 (IA, hero screen — *use the static "Loaded N songs" fallback, not the animation*), §3, §4, §5; `CLAUDE.md`; existing `musicbot/` files.
 
 **Files this phase creates/modifies:**
-- _path/to/file.ts — what changes_
-- _path/to/test.ts — what's tested_
+- `musicbot/wrangler.jsonc` — finalize bindings
+- `musicbot/src/index.ts` — Hono router (or fetch handler) with `/api/*` + asset fall-through
+- `musicbot/src/routes/auth.ts` — Apple Music developer token endpoint, session creation, music user token storage in KV
+- `musicbot/src/routes/library.ts` — paginated library sync (100/page, 429 backoff), writes to D1, snapshot to R2
+- `musicbot/src/db/schema.sql` — `users`, `library_songs`, `sessions` tables
+- `musicbot/public/index.html` — React entry
+- `musicbot/src/client/App.tsx` — top-level routes (`/login`, `/`, `/settings`)
+- `musicbot/src/client/pages/Login.tsx` — "Connect Apple Music" button
+- `musicbot/src/client/pages/Chat.tsx` — Headless UI `TabGroup` (Chat / Library), gear → `/settings`, chat input, cards list, "Loaded N songs" header
+- `musicbot/src/client/components/RecommendationCard.tsx` — album art + title/artist + 4 placeholder buttons
+- `musicbot/src/client/lib/musickit.ts` — MusicKit JS wrapper
+- Tailwind + Headless UI + Heroicons + Fraunces font setup
+- `README.md` — Apple Developer setup notes
 
-**Tests this phase adds:** _Names of tests, one line each._
+**Tests this phase adds:**
+- `auth.spec.ts` — developer token endpoint returns a valid JWT
+- `library.spec.ts` — library sync stores songs in D1, paginates, retries on 429
+- `RecommendationCard.spec.tsx` — renders title, artist, art, 4 buttons; passes a11y check
 
 **Done-when:**
-- [ ] _A user can do X._
-- [ ] _Tests for X pass._
-- [ ] _Diagram in `docs/architecture.md` reflects the new state._
+- [ ] `/login` → "Connect Apple Music" → MusicKit auth → lands on `/`.
+- [ ] Library fetched (paginated) and persisted to D1; snapshot in R2.
+- [ ] `/` shows tabbed Chat/Library, gear → `/settings`, "Loaded N songs" line.
+- [ ] At least 3 placeholder cards render (e.g., "first 3 artists from your library").
+- [ ] `npm test` passes; `wrangler deploy` ships a working public URL.
 
-**Session budget:** _< 1, 1, 1–2, 2+ sessions._
+**Session budget:** 1–2 (chunky — most likely to spill).
 
-**Risks / unknowns:** _Anything Claude should flag if it surfaces._
-
----
-
-### Phase 2 — _One-line title_
-
-_(same structure as Phase 1)_
+**Risks / unknowns:** MusicKit JS developer-token signing; music user token lifetime / refresh; React build pipeline on Workers/Pages; first encounter with the "MusicKit is underdocumented" risk from PRD §7.
 
 ---
 
-### Phase 3 — _One-line title_
+### Phase 2 — Talk to it, get real recommendations
 
-_(same structure)_
+**Goal:** User enters a natural-language prompt; the app calls their BYOK LLM with library context and replaces placeholder cards with real recommendations. Maps to first half of PRD §8 week-3 milestone.
+
+**Context to load:** PRD §4 story 1, §6 (AI Gateway, BYOK); DESIGN §3 (chat bubble — *no streaming yet*), §6 (chat width on desktop); `CLAUDE.md`; Phase 1 files.
+
+**Files this phase creates/modifies:**
+- `musicbot/src/routes/chat.ts` — POST `/api/chat` (prompt → LLM → JSON recs)
+- `musicbot/src/lib/llm.ts` — Gemini (Google AI Studio) call via AI Gateway
+- `musicbot/src/lib/promptTemplates.ts` — prompt construction with a *summary* of the library (not the whole library)
+- `musicbot/src/routes/settings.ts` — KV-backed BYOK key storage
+- `musicbot/src/client/pages/Settings.tsx` — visible-label BYOK input + Apple Music auth status
+- `musicbot/src/client/pages/Chat.tsx` — wire input → `/api/chat` → cards
+- `musicbot/src/client/lib/api.ts` — fetch wrapper with session header
+
+**Tests this phase adds:**
+- `chat.spec.ts` — given a prompt + mocked LLM, returns structured rec JSON
+- `llm.spec.ts` — handles missing key, builds the AI Gateway URL correctly
+- `settings.spec.ts` — BYOK round-trip read/write
+- `promptTemplates.spec.ts` — library summary stays under a token budget
+
+**Done-when:**
+- [ ] User sets a Google AI Studio key in `/settings`.
+- [ ] Typing "something like Phoebe Bridgers but more upbeat" updates the cards with real recs (title, artist, album art via MusicKit catalog lookup).
+- [ ] Reply lands as a single message — no streaming.
+- [ ] Tests pass; deployed.
+
+**Session budget:** 1–2.
+
+**Risks / unknowns:** Prompt quality before any feedback exists (PRD §7 cold-start risk); MusicKit catalog lookup for free-text artist/song names returned by the LLM; AI Gateway BYOK semantics.
+
+---
+
+### Phase 3 — Act on a recommendation
+
+**Goal:** Like / dislike / add-to-library / play buttons on each card all work and write feedback events to D1. Maps to second half of PRD §8 week-3 milestone.
+
+**Context to load:** PRD §4 stories 2+3; DESIGN §3 (card), §5 (a11y — color + icon, 44px tap targets); Phase 1+2 files.
+
+**Files this phase creates/modifies:**
+- `musicbot/src/db/schema.sql` — add `feedback_events` (`user_id`, `song_id`, `kind`, `created_at`)
+- `musicbot/src/routes/feedback.ts` — POST `/api/feedback` for like/dislike/add
+- `musicbot/src/lib/musickit.ts` — `addToLibrary`, `play` helpers
+- `musicbot/src/client/components/RecommendationCard.tsx` — wire 4 buttons + fill-state change + tactile press feedback (CSS only — respect `prefers-reduced-motion`)
+- `musicbot/src/client/lib/api.ts` — feedback POST helpers
+
+**Tests this phase adds:**
+- `feedback.spec.ts` — events written with `user_id`, `song_id`, `kind`, timestamp
+- `RecommendationCard.spec.tsx` — buttons call correct handlers, fill-state change is a class change (verifiable), 44px target via computed style
+- `musickit-add.spec.ts` — `addToLibrary` handles auth refresh + 429
+
+**Done-when:**
+- [ ] All four buttons functional, ≥44px on a 390px viewport.
+- [ ] Like / dislike change icon **and** fill (not color alone — DESIGN §5).
+- [ ] Add-to-library adds the song to the user's Apple Music library.
+- [ ] Feedback events visible in D1.
+- [ ] Tests pass; deployed.
+
+**Session budget:** 1.
+
+**Risks / unknowns:** MusicKit `addToLibrary` scope / errors; tap-target tuning without a real iPhone in hand (DESIGN §7).
+
+---
+
+### Phase 4 — Taste profile that learns
+
+**Goal:** Recommendations measurably differ between session 1 (cold start) and session 5 (after feedback) because the LLM prompt is enriched with a derived taste profile. Maps to PRD §8 week-4 demo milestone.
+
+**Context to load:** PRD §3 (success criteria), §4 story 2, §7 (cold-start risk); DESIGN §3; Phase 1–3 files.
+
+**Files this phase creates/modifies:**
+- `musicbot/src/lib/tasteProfile.ts` — derive a profile from library + feedback (favored genres, artists, eras; recent dislikes as exclusions)
+- `musicbot/src/lib/promptTemplates.ts` — inject profile signals
+- `musicbot/src/routes/chat.ts` — call `tasteProfile` before LLM
+- `musicbot/src/db/schema.sql` — add `taste_profile_snapshots` (for observability + demo)
+
+**Tests this phase adds:**
+- `tasteProfile.spec.ts` — sane profile given mock library + mock feedback
+- `chat.spec.ts` — prompt includes profile signals
+- Integration: simulate 10 likes/dislikes, assert next recs differ from baseline (deterministic via seeded LLM mock)
+
+**Done-when:**
+- [ ] Profile updates after every feedback event.
+- [ ] LLM prompt visibly carries taste signals (verifiable via AI Gateway log).
+- [ ] Recs after 10 feedback events differ from cold-start recs in tests.
+- [ ] Demo can show before / after side-by-side.
+- [ ] Tests pass; deployed.
+
+**Session budget:** 1–2.
+
+**Risks / unknowns:** Cold-start quality without play counts (PRD §7 — needs to be tested early); over-fitting to a single dislike; profile drift if an event is mis-clicked.
+
+---
+
+### Phase 5 — Library tab (recommendation history)
+
+**Goal:** Users see past recommendations with their ratings in the Library tab. Maps to PRD §4 story #4 (Should-have).
+
+**Context to load:** PRD §4 story 4; DESIGN §2 (Library tab), §6 (1/2/3-col grid); Phase 1+3 files.
+
+**Files this phase creates/modifies:**
+- `musicbot/src/routes/history.ts` — paginated history (newest first)
+- `musicbot/src/client/pages/Chat.tsx` — wire the Library tab
+- `musicbot/src/client/components/RecommendationCard.tsx` — read-only "history" variant showing the rating given
+- `musicbot/src/client/components/HistoryGrid.tsx` — responsive 1/2/3-col
+
+**Tests this phase adds:**
+- `history.spec.ts` — paginated, includes feedback, newest first
+- `HistoryGrid.spec.tsx` — column count correct at `md` + `lg`
+
+**Done-when:**
+- [ ] Library tab shows past recs newest-first, with the rating the user gave.
+- [ ] Responsive: 1 col phone, 2 col tablet, 3 col desktop.
+- [ ] Tests pass; deployed.
+
+**Session budget:** 1.
+
+**Risks / unknowns:** low.
+
+---
+
+### Phase 6 — Polish & demo prep
+
+**Goal:** Cold-start animation lands (with reduced-motion fallback), README has demo + PRD videos, architecture diagram is current. Chat-streaming feel only if time remains.
+
+**Context to load:** PRD §8 week-4 demo; DESIGN §2 (cold-start hero), §3 (streaming reply, optional), §5 (`prefers-reduced-motion`, `aria-live`).
+
+**Files this phase creates/modifies:**
+- `musicbot/src/client/components/ColdStartAnimation.tsx`
+- `musicbot/src/client/pages/Chat.tsx` — show animation only on first session
+- `musicbot/src/client/components/ChatBubble.tsx` — *optional* token streaming + `aria-live="polite"`
+- `musicbot/src/routes/chat.ts` — *optional* SSE response
+- `README.md` — demo video, PRD video, architecture diagram link
+- `docs/architecture.md` — regenerated diagram
+
+**Tests this phase adds:**
+- `ColdStartAnimation.spec.tsx` — degrades to static text under `prefers-reduced-motion`
+- `ChatBubble.spec.tsx` (if streaming shipped) — announces via `aria-live`
+
+**Done-when:**
+- [ ] Animation runs once on first session; static text otherwise.
+- [ ] `prefers-reduced-motion` honored.
+- [ ] README links demo + PRD videos and points at architecture diagram.
+- [ ] Tests pass; deployed.
+
+**Session budget:** 1–2.
+
+**Risks / unknowns:** Animation eats time — drop streaming first, then animation polish, before letting this phase block the demo.
 
 ---
 
 ## Decision log
 
-A short append-only log of when the plan changed and why. Helps future-you understand why the current phase numbering exists.
-
 | Date | Phase touched | Change | Reason |
 |---|---|---|---|
-| YYYY-MM-DD | — | Initial plan | — |
+| 2026-05-07 | All | Initial plan | Vertical slicing chosen over horizontal/hybrid because PRD §8 milestones are already vertical. |
+| 2026-05-07 | Phase 1 | Cold-start animation deferred to Phase 6 | DESIGN §7 flags it as the riskiest motion work; Phase 1 already chunky. Static "Loaded N songs" fallback meets the week-2 milestone. |
+| 2026-05-07 | — | Story #5 (playlist) and #6 (taste avatar) excluded from this plan | Should/Could-haves below the v1 demo bar; will return via decision log if scope changes. |
 
 ---
 
 ## Handoff notes
 
-_What state should the repo be in when this plan is "done"? Used to verify the project shipped._
+The project is "done" when:
 
 - Public URL deployed and linked from README.
-- All Must-have user stories from PRD.md §4 have green tests.
+- All three PRD §4 must-haves have green tests (NL recs, taste learning, card actions).
 - Architecture diagram regenerated and committed.
-- Demo video and PRD video linked from README.
+- Demo video + PRD video linked from README.
+- Developer can answer unscripted questions about every part of the code (PRD §7 second-biggest risk).
