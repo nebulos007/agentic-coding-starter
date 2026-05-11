@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 
 > **Status:** Draft
-> **Last updated:** 2026-05-07
+> **Last updated:** 2026-05-11
 > **Author:** Carlos Stanton
 > **Stakeholder:** Yourself / class project demo
 
@@ -30,6 +30,7 @@ Apple Music knows your taste — it must, because its recommendations usually wo
 - **A goal we want but won't measure as success in v1:** Users listen *inside* our app, not just Apple Music. Every in-app listen is a signal we can use to improve their taste profile (full plays, early skips, repeats). We will encourage this in the UX, but the v1 success metric is still songs added to library — not session minutes.
 - **Not a goal for v1:** Becoming a full music client. We surface playback controls only as a means to capture listening signal — not to compete with Apple Music's player UX. v1 stays focused on discovery and feedback.
 - **Long-term vision (v2+):** A native iOS/Mac app built on the Swift MusicKit SDK that serves as a **taste-aware companion client** to Apple Music — full playback, queue management, and the data access (play counts, real listening history) the web API doesn't expose, with our chat-driven discovery layer on top. The framing is *augmenting* Apple Music, not replacing it; Apple's MusicKit program exists to enable exactly this kind of third-party client. v1 proves the discovery concept on the web; v2 brings it to native with deeper integration. This vision should shape v1 decisions: don't paint yourself into a corner that makes the v2 port painful.
+- **Free tier (v2):** A YouTube-backed free tier. User signs in with Google, the app reads their existing YouTube data (playlists, liked videos, music-channel subscriptions) for cold-start taste signal, and creates a private playlist that becomes their persisted library. Same conceptual model as Apple Music — the library lives in the music service, the app reads/writes against it — different API surface. Lets the product have a real free tier without scraping or ToS violations.
 - **Kill condition (v2):** Apple restricts the MusicKit API to the point where the core features no longer work.
 
 ---
@@ -57,7 +58,7 @@ Apple Music knows your taste — it must, because its recommendations usually wo
 - **MusicKit native SDK (Swift)** — requires learning Swift; web API is sufficient for v1
 - **Play count / listening history from Apple Music** — Apple does not expose this via the web API; we build our own signal from in-app behavior
 - **Spotify integration** — not viable. As of Feb 2026, Spotify deprecated the endpoints a discovery app needs (audio features, audio analysis, related artists, recommendations, editorial playlists). New apps are also capped at 5 manually allowlisted users in "Development Mode," and "Extended Quota Mode" effectively requires an existing 250k+ MAU business (>95% of applications rejected per Spotify's own blog). This is a closed door, not a v2 consideration.
-- **YouTube integration** — out of scope for v1
+- **YouTube integration** — out of scope for v1. The intended v2 shape is a YouTube-playlist-backed free tier (see §3), not YouTube as a generic catalog source. Holding it for v2 keeps v1 focused on the Apple Music discovery loop.
 - **Native iOS or Mac app** — v2; v1 is a web app
 - **Paid/managed AI tier** — v2; v1 is BYOK only
 - **Social or collaborative features** — not in v1

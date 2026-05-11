@@ -1,7 +1,7 @@
 # Build Plan
 
 > **Status:** Draft
-> **Last updated:** 2026-05-07
+> **Last updated:** 2026-05-11
 > **Current phase:** Phase 0 (scaffolding mostly done — finalizing)
 
 ---
@@ -256,6 +256,7 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 | 2026-05-07 | All | Initial plan | Vertical slicing chosen over horizontal/hybrid because PRD §8 milestones are already vertical. |
 | 2026-05-07 | Phase 1 | Cold-start animation deferred to Phase 6 | DESIGN §7 flags it as the riskiest motion work; Phase 1 already chunky. Static "Loaded N songs" fallback meets the week-2 milestone. |
 | 2026-05-07 | — | Story #5 (playlist) and #6 (taste avatar) excluded from this plan | Should/Could-haves below the v1 demo bar; will return via decision log if scope changes. |
+| 2026-05-11 | — | YouTube-playlist free tier deferred to v2 | Surfaced during planning. Strategically interesting (real free tier, not just trial mode) but doubles v1 scope and serves no v1 user — the demo runs on the developer's Apple Music account. Captured in PRD §3 v2 vision. |
 
 ---
 
