@@ -12,20 +12,21 @@ _This file is the source of truth for UI/UX decisions on this project. Fill it o
 
 **Reference apps:**
 
-- **Apple Music** — for album-art-forward layout. Artwork is the hero; chrome stays out of the way. Users are jumping back and forth to Apple Music, so visual continuity helps.
+- **Apple Music** — for album-art-forward layout. Artwork is the hero; chrome stays out of the way. (Visual reference only — v1 ships against Tidal; see PRD §3.)
+- **Tidal** — the v1 platform. Its dark, album-art-forward presentation is closely aligned with what we want for visual continuity when users hop between apps.
 - **iMessage** — for chat rhythm. Bubble pacing, the way a reply streams in, send-button feedback, the feeling that the other side is "thinking."
 
 **Anti-references:**
 
 - **Facebook** — looks cheap. Cluttered, ad-driven, low-trust visual quality. This app should feel like something a music enthusiast would actually want to open.
 
-**Brand constraints:** Stay inside Apple's MusicKit / "Works with Apple Music" guidelines.
+**Brand constraints:** Stay inside TIDAL's developer / brand guidelines. (Look up the current version on the TIDAL Developer Portal before launch — the rules below are the conservative defaults; tighten or relax once we've read the official guide.)
 
 Practical implications:
-- **Don't use Apple marks** (Apple logo, Apple Music wordmark, the pink-to-red gradient icon) as our own branding.
-- **Don't impersonate Apple Music's UI.** Reference its album-art-forward feel, but the app should not look like a reskin of Apple Music — it's a companion, not a clone.
-- **Don't use "Apple Music" in the app name** in a way that implies endorsement. "[Name] for Apple Music" framing is OK; "Apple Music [Name]" is not.
-- **Use the official "Listen on Apple Music" badge** when linking out, per Apple's badge guidelines.
+- **Don't use TIDAL marks** (the TIDAL wordmark, logo, gradient) as our own branding.
+- **Don't impersonate TIDAL's UI.** Reference its album-art-forward feel, but the app should not look like a reskin of TIDAL — it's a companion, not a clone.
+- **Don't use "TIDAL" in the app name** in a way that implies endorsement. "[Name] for TIDAL" framing is OK; "TIDAL [Name]" is not.
+- **Use the official "Listen on TIDAL" badge / attribution** when linking out, per TIDAL's badge guidelines if one is published; otherwise plain-text "Listen on TIDAL" is safer.
 - **Don't use SF Pro** as our brand font — it's licensed only for Apple platforms / Apple-platform apps. Pick a different display/body font (decided in §4).
 
 ## 2. Information architecture
@@ -33,7 +34,7 @@ Practical implications:
 **Primary screens (top-level routes):**
 
 - **`/`** — chat / discovery. Two tabs at the top: **Chat** (default — conversation + recommendation cards) and **Library** (past recommendations with ratings, user story #4). Library is a tab, not its own URL.
-- **`/settings`** — BYOK API key, Apple Music auth, taste profile / avatar view (user story #6 if kept), sign-out. Profile is folded in here for v1 to keep the surface small.
+- **`/settings`** — BYOK API key, Tidal auth, taste profile / avatar view (user story #6 if kept), sign-out. Profile is folded in here for v1 to keep the surface small.
 - **`/login`** — landing + auth.
 
 **Navigation model:** No persistent nav chrome. A **gear icon in the top-right** of `/` links to `/settings`. Settings is rarely visited, so it doesn't need a tab bar slot — and skipping the bar gives the chat the full screen on mobile, which fits the "music-first, quiet chrome" mood.
@@ -46,7 +47,7 @@ The two **Chat / Library** tabs sit at the top of `/` (a Headless UI `TabGroup`)
 
 In 3 seconds it should communicate, in order:
 
-1. **"This knows your library."** — On the first session, after Apple Music auth, run a short animation that visibly chews through the user's library (album art tiles flying in, a counter ticking up, genres surfacing). This turns the unavoidable cold-start load into a "the app is doing something for me" moment instead of a spinner.
+1. **"This knows your library."** — On the first session, after Tidal auth, run a short animation that visibly chews through the user's library (album art tiles flying in, a counter ticking up, genres surfacing). This turns the unavoidable cold-start load into a "the app is doing something for me" moment instead of a spinner.
 2. **"Talk to me about music."** — The animation resolves into the chat input with a placeholder like _"What do you want to hear?"_, ready for the first prompt.
 
 On subsequent sessions, skip straight to the chat — the animation is a one-time onboarding moment, not chrome we re-show every time.
@@ -60,7 +61,7 @@ On subsequent sessions, skip straight to the chat — the animation is a one-tim
 - **Custom components** (Headless UI doesn't cover):
   - **Recommendation card** — album art, title/artist, action buttons (play / add-to-library / like / dislike). Just a styled `div` with Heroicons + tactile button feedback.
   - **Chat bubble + streaming reply** — message list, user vs. assistant bubbles, streaming-text animation, send button.
-  - **Audio player controls** — play/pause/skip + scrubber. MusicKit JS provides behavior; we build the visuals. Kept minimal per PRD §3 (we are not competing with Apple Music's player).
+  - **Audio player controls** — play/pause/skip + scrubber. TIDAL Player SDK provides behavior; we build the visuals. Kept minimal per PRD §3 (we are not competing with Tidal's player).
   - **Cold-start library animation** — first-session-only "this knows your library" moment (see §2 hero screen).
   - **Taste-avatar visualization** — deferred (user story #6, "could-have"). Likely SVG/canvas. Out of scope for v1.
 

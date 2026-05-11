@@ -22,7 +22,7 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 ## Strategy
 
 - **Slicing principle:** **Vertical slices by user story.** Each phase ships one PRD must-have end-to-end (DB → API → UI). Matches the week-2 / week-3 / week-4 milestones in PRD §8, which are themselves vertical.
-- **Critical path:** Phase 1 (Apple Music auth + library load) → Phase 2 (BYOK LLM wired in). PRD §7 calls MusicKit JS the biggest risk; doing it first means a week-2 wall is surfaced in week 2, not in week 4.
+- **Critical path:** Phase 1 (TIDAL auth + library load) → Phase 2 (BYOK LLM wired in). PRD §7 calls the TIDAL Web API + Player SDK the biggest risk; doing it first means a week-2 wall is surfaced in week 2, not in week 4.
 - **Deferred on purpose:**
   - **Cold-start library animation** → Phase 6. DESIGN §7 flags it as the highest-risk piece of motion work. Phase 1 ships a static "Loaded N songs" message instead.
   - **Chat-streaming "iMessage feel"** → Phase 6, optional. PRD owner has explicitly said this is not a v1 concern.
@@ -42,7 +42,7 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 **Files this phase creates/modifies:**
 - `musicbot/wrangler.jsonc` — add `[[d1_databases]]`, `[[r2_buckets]]`, `[[kv_namespaces]]`, AI Gateway env var
 - `musicbot/src/index.ts` — verify smoke route still works after bindings added
-- `README.md` — public URL, BYOK note, Apple Developer ($99/yr) note
+- `README.md` — public URL, BYOK note, TIDAL developer-account setup note
 - `musicbot/.dev.vars.example` — placeholder for local secrets
 
 **Tests this phase adds:** Existing smoke test (`test/index.spec.ts`) continues to pass.
@@ -59,34 +59,34 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 
 ---
 
-### Phase 1 — Connect Apple Music & see your library
+### Phase 1 — Connect Tidal & see your library
 
-**Goal:** A user signs in with Apple Music, the app fetches and stores their library, and the chat screen shows recommendation cards (placeholder content) plus a "Loaded N songs" message. Maps to PRD §8 week-2 milestone.
+**Goal:** A user signs in with Tidal, the app fetches and stores their library, and the chat screen shows recommendation cards (placeholder content) plus a "Loaded N songs" message. Maps to PRD §8 week-2 milestone.
 
-**Context to load:** PRD §4 stories 1+3, §6, §7 (MusicKit limits), §8 week-2; DESIGN §2 (IA, hero screen — *use the static "Loaded N songs" fallback, not the animation*), §3, §4, §5; `CLAUDE.md`; existing `musicbot/` files.
+**Context to load:** PRD §4 stories 1+3, §6, §7 (TIDAL Web API + Player SDK limits), §8 week-2; DESIGN §2 (IA, hero screen — *use the static "Loaded N songs" fallback, not the animation*), §3, §4, §5; `CLAUDE.md`; existing `musicbot/` files.
 
 **Files this phase creates/modifies:**
 - `musicbot/wrangler.jsonc` — finalize bindings
 - `musicbot/src/index.ts` — Hono router (or fetch handler) with `/api/*` + asset fall-through
-- `musicbot/src/routes/auth.ts` — Apple Music developer token endpoint, session creation, music user token storage in KV
-- `musicbot/src/routes/library.ts` — paginated library sync (100/page, 429 backoff), writes to D1, snapshot to R2
+- `musicbot/src/routes/auth.ts` — TIDAL OAuth 2.1 flow (authorization code + PKCE), session creation, access/refresh tokens stored in KV
+- `musicbot/src/routes/library.ts` — paginated library sync (page size + 429 backoff TBD from Phase-1 discovery), writes to D1, snapshot to R2
 - `musicbot/src/db/schema.sql` — `users`, `library_songs`, `sessions` tables
 - `musicbot/public/index.html` — React entry
 - `musicbot/src/client/App.tsx` — top-level routes (`/login`, `/`, `/settings`)
-- `musicbot/src/client/pages/Login.tsx` — "Connect Apple Music" button
+- `musicbot/src/client/pages/Login.tsx` — "Connect Tidal" button
 - `musicbot/src/client/pages/Chat.tsx` — Headless UI `TabGroup` (Chat / Library), gear → `/settings`, chat input, cards list, "Loaded N songs" header
 - `musicbot/src/client/components/RecommendationCard.tsx` — album art + title/artist + 4 placeholder buttons
-- `musicbot/src/client/lib/musickit.ts` — MusicKit JS wrapper
+- `musicbot/src/client/lib/tidal.ts` — TIDAL Web API + Player SDK wrapper
 - Tailwind + Headless UI + Heroicons + Fraunces font setup
-- `README.md` — Apple Developer setup notes
+- `README.md` — TIDAL developer-account setup notes
 
 **Tests this phase adds:**
-- `auth.spec.ts` — developer token endpoint returns a valid JWT
+- `auth.spec.ts` — OAuth callback exchanges code for tokens; PKCE verifier round-trips
 - `library.spec.ts` — library sync stores songs in D1, paginates, retries on 429
 - `RecommendationCard.spec.tsx` — renders title, artist, art, 4 buttons; passes a11y check
 
 **Done-when:**
-- [ ] `/login` → "Connect Apple Music" → MusicKit auth → lands on `/`.
+- [ ] `/login` → "Connect Tidal" → TIDAL OAuth → lands on `/`.
 - [ ] Library fetched (paginated) and persisted to D1; snapshot in R2.
 - [ ] `/` shows tabbed Chat/Library, gear → `/settings`, "Loaded N songs" line.
 - [ ] At least 3 placeholder cards render (e.g., "first 3 artists from your library").
@@ -94,7 +94,7 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 
 **Session budget:** 1–2 (chunky — most likely to spill).
 
-**Risks / unknowns:** MusicKit JS developer-token signing; music user token lifetime / refresh; React build pipeline on Workers/Pages; first encounter with the "MusicKit is underdocumented" risk from PRD §7.
+**Risks / unknowns:** TIDAL OAuth 2.1 + PKCE on a Workers backend; refresh-token rotation semantics; Player SDK initialization in-browser; React build pipeline on Workers/Pages; first encounter with the "TIDAL platform is newer / less documented" risk from PRD §7.
 
 ---
 
@@ -109,7 +109,7 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 - `musicbot/src/lib/llm.ts` — Gemini (Google AI Studio) call via AI Gateway
 - `musicbot/src/lib/promptTemplates.ts` — prompt construction with a *summary* of the library (not the whole library)
 - `musicbot/src/routes/settings.ts` — KV-backed BYOK key storage
-- `musicbot/src/client/pages/Settings.tsx` — visible-label BYOK input + Apple Music auth status
+- `musicbot/src/client/pages/Settings.tsx` — visible-label BYOK input + Tidal auth status
 - `musicbot/src/client/pages/Chat.tsx` — wire input → `/api/chat` → cards
 - `musicbot/src/client/lib/api.ts` — fetch wrapper with session header
 
@@ -121,13 +121,13 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 
 **Done-when:**
 - [ ] User sets a Google AI Studio key in `/settings`.
-- [ ] Typing "something like Phoebe Bridgers but more upbeat" updates the cards with real recs (title, artist, album art via MusicKit catalog lookup).
+- [ ] Typing "something like Phoebe Bridgers but more upbeat" updates the cards with real recs (title, artist, album art via TIDAL catalog lookup).
 - [ ] Reply lands as a single message — no streaming.
 - [ ] Tests pass; deployed.
 
 **Session budget:** 1–2.
 
-**Risks / unknowns:** Prompt quality before any feedback exists (PRD §7 cold-start risk); MusicKit catalog lookup for free-text artist/song names returned by the LLM; AI Gateway BYOK semantics.
+**Risks / unknowns:** Prompt quality before any feedback exists (PRD §7 cold-start risk); TIDAL catalog lookup for free-text artist/song names returned by the LLM; AI Gateway BYOK semantics.
 
 ---
 
@@ -140,25 +140,25 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 **Files this phase creates/modifies:**
 - `musicbot/src/db/schema.sql` — add `feedback_events` (`user_id`, `song_id`, `kind`, `created_at`)
 - `musicbot/src/routes/feedback.ts` — POST `/api/feedback` for like/dislike/add
-- `musicbot/src/lib/musickit.ts` — `addToLibrary`, `play` helpers
+- `musicbot/src/lib/tidal.ts` — `addToLibrary`, `play` helpers
 - `musicbot/src/client/components/RecommendationCard.tsx` — wire 4 buttons + fill-state change + tactile press feedback (CSS only — respect `prefers-reduced-motion`)
 - `musicbot/src/client/lib/api.ts` — feedback POST helpers
 
 **Tests this phase adds:**
 - `feedback.spec.ts` — events written with `user_id`, `song_id`, `kind`, timestamp
 - `RecommendationCard.spec.tsx` — buttons call correct handlers, fill-state change is a class change (verifiable), 44px target via computed style
-- `musickit-add.spec.ts` — `addToLibrary` handles auth refresh + 429
+- `tidal-add.spec.ts` — `addToLibrary` handles auth refresh + 429
 
 **Done-when:**
 - [ ] All four buttons functional, ≥44px on a 390px viewport.
 - [ ] Like / dislike change icon **and** fill (not color alone — DESIGN §5).
-- [ ] Add-to-library adds the song to the user's Apple Music library.
+- [ ] Add-to-library adds the song to the user's Tidal library.
 - [ ] Feedback events visible in D1.
 - [ ] Tests pass; deployed.
 
 **Session budget:** 1.
 
-**Risks / unknowns:** MusicKit `addToLibrary` scope / errors; tap-target tuning without a real iPhone in hand (DESIGN §7).
+**Risks / unknowns:** TIDAL `addToLibrary` scope / errors; tap-target tuning without a real iPhone in hand (DESIGN §7).
 
 ---
 
@@ -256,7 +256,8 @@ That way each phase fits in a focused session — no full-repo loads, no thrashi
 | 2026-05-07 | All | Initial plan | Vertical slicing chosen over horizontal/hybrid because PRD §8 milestones are already vertical. |
 | 2026-05-07 | Phase 1 | Cold-start animation deferred to Phase 6 | DESIGN §7 flags it as the riskiest motion work; Phase 1 already chunky. Static "Loaded N songs" fallback meets the week-2 milestone. |
 | 2026-05-07 | — | Story #5 (playlist) and #6 (taste avatar) excluded from this plan | Should/Could-haves below the v1 demo bar; will return via decision log if scope changes. |
-| 2026-05-11 | — | YouTube-playlist free tier deferred to v2 | Surfaced during planning. Strategically interesting (real free tier, not just trial mode) but doubles v1 scope and serves no v1 user — the demo runs on the developer's Apple Music account. Captured in PRD §3 v2 vision. |
+| 2026-05-11 | — | YouTube-playlist free tier deferred to v2 | Surfaced during planning. Strategically interesting (real free tier, not just trial mode) but doubles v1 scope and serves no v1 user — the demo runs on the developer's premium-service account. Captured in PRD §3 v2 vision. |
+| 2026-05-11 | All | v1 reference platform swapped from Apple Music to Tidal | Apple Developer account is $99/yr before any code ships; TIDAL developer access is free and the Player SDK is covered by Tidal's 30-day trial for the testing window. TIDAL's API shape (OAuth 2.1 + Player SDK + catalog metadata) is the closest substitute for MusicKit JS, so the Phase-1 skeleton ports cleanly. Apple Music demoted to v2 parallel premium tier (was Tidal's old slot). PRD §1–§8 rewritten; native-client vision pushed from v2 to v3+. |
 
 ---
 
