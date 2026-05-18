@@ -4,9 +4,9 @@ This file tells Claude how to work on this codebase. Keep it accurate — an out
 
 ## About this project
 
-**What it is:** _One sentence. Update this as your project evolves._
+**What it is:** A Cloudflare-hosted web app that lets Tidal users have a natural-language conversation with their library to discover new music, learning their taste from explicit feedback over time.
 
-**Who it's for:** _Who is the user? Be specific. "Small business owners" is vague; "the owner of Maria's Tacos who needs to post weekly specials" is useful._
+**Who it's for:** A 20-year-old college student and active music enthusiast with a large, carefully curated Tidal library, who listens on his phone primarily, is comfortable with BYOK onboarding, and wants to ask for music in specific terms Tidal's "For You" can't handle.
 
 **Product requirements:** The full PRD lives in `docs/PRD.md`. Read it before making meaningful architectural or feature decisions.
 
@@ -16,15 +16,19 @@ This file tells Claude how to work on this codebase. Keep it accurate — an out
 
 ## Tech stack
 
+_Planned stack — most pieces aren't installed yet. As of now only TypeScript, Workers, Wrangler, and Vitest are wired up; the rest land as build phases reach them._
+
 - **Language:** TypeScript
 - **Runtime:** Cloudflare Workers
-- **Framework:** Hono (if used)
-- **Database:** Cloudflare D1 (if used)
-- **Storage:** Cloudflare R2 (if used)
+- **Backend framework:** Hono (planned)
+- **Frontend:** React + Headless UI + Tailwind CSS (per `docs/DESIGN.md` defaults)
+- **Frontend hosting:** Workers Assets — the same Worker serves `./public` static files and `/api/*` routes.
+- **Database:** Cloudflare D1 (users, taste profiles, recommendation history, feedback events)
+- **Object storage:** Cloudflare R2 (library snapshot JSON for cold-start profile building)
+- **KV:** Cloudflare KV (TIDAL OAuth tokens, session state)
+- **AI proxy:** Cloudflare AI Gateway (proxies the user's BYOK LLM call; adds logging + rate limiting)
 - **Testing:** Vitest with `@cloudflare/vitest-pool-workers`
 - **Deployment:** Wrangler to Cloudflare
-
-_Remove lines above that don't apply. Add any others you add later._
 
 ## How to work on this code
 

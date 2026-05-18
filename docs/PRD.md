@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 
 > **Status:** Draft
-> **Last updated:** 2026-05-11
+> **Last updated:** 2026-05-17
 > **Author:** Carlos Stanton
 > **Stakeholder:** Yourself / class project demo
 
@@ -70,7 +70,7 @@ Tidal knows your taste — its "For You" mixes and daily discoveries land often 
 
 ## 6. Technical shape
 
-- **Type of app:** Full-stack web app. Frontend served from Cloudflare Pages, backend logic in Cloudflare Workers.
+- **Type of app:** Full-stack web app. A single Cloudflare Worker serves both the static frontend (via Workers Assets) and the `/api/*` backend routes — one deploy, one origin, no CORS between frontend and API.
 - **Does it need to store data?** Yes — user taste profile, recommendation history, explicit feedback (liked/disliked/added), in-app listening session events.
 - **Does it need authentication?** Yes. Users log in so their taste profile and history persist across sessions and devices. Auth is required (not optional) because the taste profile is the core value of the app.
 - **Does it need to call external services?** Yes — TIDAL Web API + Player SDK (catalog + playback + library), and the user's own LLM API key (Google AI Studio / Gemini as the primary recommended option, others supported).
@@ -80,8 +80,7 @@ Tidal knows your taste — its "For You" mixes and daily discoveries land often 
 
 | Need | CF Product | Why |
 |---|---|---|
-| Hosting the web UI | Pages | Free static + serverless hosting, deploys from git |
-| Backend API | Workers | Serverless functions for taste profile, recommendations, session tracking |
+| Hosting the web UI + backend | Workers + Workers Assets | One Worker serves the static frontend from `./public` and `/api/*` routes; bindings (D1/R2/KV/AI Gateway) attach natively. Preferred over Pages for full-stack apps where the frontend and Worker are co-deployed. |
 | Structured data | D1 | SQL database for users, taste profiles, recommendation history, feedback events |
 | Cross-device sync | R2 | Store library snapshot JSON for fast cold-start profile building |
 | AI call proxying | AI Gateway | Proxies the user's own API key — adds logging and rate limiting for free |
